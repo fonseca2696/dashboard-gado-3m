@@ -2,6 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>3M Agropecuária — Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -470,9 +473,12 @@ tbody tr:hover td{background:var(--blue6)}
 // ══════════════════════════════════════════════════
 const SHEET_ID    = '1M8oShFFU2LFgLoCwJxYavDwE_rkQA1x-';
 const GID_ENTREGA = '1962257883';
-const GID_PREVISAO = '220787163'; // ← preencher com o GID da aba Previsão
+const GID_PREVISAO = '220787163';
+const API_KEY = 'AIzaSyDGuUvLZxh8Hho5SudZgNRGkb5_HuTyfWw';
 
-const CSV = gid => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}&t=${Date.now()}`;
+// Nomes das abas (para busca via API)
+const ABA_ENTREGA  = 'Entrega';
+const ABA_PREVISAO = 'Previsão';
 
 const MN=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const MF=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
@@ -519,12 +525,19 @@ function startAutoRefresh(){
   autoRefreshTimer=setInterval(()=>{if(currentModule){loadModule(currentModule,true);}},10*60*1000);
 }
 
-// ── FETCH CSV ─────────────────────────────────────
-async function fetchCSV(gid){
-  const url=CSV(gid);
+// ── FETCH via Google Sheets API v4 ────────────────
+async function fetchSheetData(abaName){
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(abaName)}?key=${API_KEY}&t=${Date.now()}`;
   const res=await fetch(url);
-  if(!res.ok)throw new Error('HTTP '+res.status);
-  return res.text();
+  if(!res.ok){
+    const err=await res.json().catch(()=>({}));
+    throw new Error(err.error?.message||'HTTP '+res.status);
+  }
+  const data=await res.json();
+  const rows=data.values||[];
+  if(!rows.length)throw new Error('Aba "'+abaName+'" vazia ou não encontrada');
+  // Convert array of arrays to TSV string (same format as CSV parser expects)
+  return rows.map(r=>r.join('\t')).join('\n');
 }
 
 // ── LOAD MODULE ───────────────────────────────────
@@ -539,9 +552,9 @@ async function loadModule(module, silent=false){
     setStep(1);
   }
   try{
-    const gid = module==='entrega' ? GID_ENTREGA : GID_PREVISAO;
+    const abaName = module==='entrega' ? ABA_ENTREGA : ABA_PREVISAO;
     if(!silent)setStep(2);
-    const csv = await fetchCSV(gid);
+    const csv = await fetchSheetData(abaName);
     if(!silent)setStep(3);
     if(module==='entrega'){
       parseEntrega(csv);
