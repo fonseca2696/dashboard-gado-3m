@@ -281,14 +281,7 @@ tbody tr:hover td{background:var(--blue6)}
       <div style="font-size:40px;margin-bottom:12px">⚠️</div>
       <h2>Não foi possível carregar os dados</h2>
       <p id="errorMsg">A planilha ainda não está disponível publicamente.</p>
-      <div class="error-card steps-fix" id="errorSteps">
-        <strong>Para resolver, peça ao Filipe:</strong><br>
-        1. Abrir a planilha no Google Sheets<br>
-        2. Clicar em <strong>Compartilhar</strong><br>
-        3. Em "Acesso geral" → <strong>Qualquer pessoa com o link</strong><br>
-        4. Permissão: <strong>Leitor</strong><br>
-        5. Clicar em <strong>Concluído</strong>
-      </div>
+      <div class="error-card steps-fix" id="errorSteps">Se o erro persistir, envie o texto acima para a Natália (natalia@3m.agr.br).</div>
       <button class="btn-retry" onclick="retryLoad()">↻ Tentar novamente</button>
     </div>
   </div>
@@ -598,6 +591,7 @@ async function fetchSheetData(gid){
 
 async function loadModule(module, silent=false){
   currentModule=module;
+  if(!authToken){iniciarLogin();return;}
   if(!silent){
     show('loadingPage');
     document.getElementById('dot').className='dot spin';
@@ -633,12 +627,13 @@ async function loadModule(module, silent=false){
     if(lu)lu.textContent='Última atualização: '+now;
     startAutoRefresh();
   } catch(e){
+    if(!authToken){iniciarLogin();return;}
     if(!silent){
       show('errorPage');
       document.getElementById('dot').className='dot err';
       document.getElementById('stxt').textContent='Erro ao carregar';
       document.getElementById('btnHome').style.display='';
-      document.getElementById('errorMsg').textContent='Não foi possível acessar a planilha: '+e.message;
+      document.getElementById('errorMsg').textContent='Não foi possível carregar os dados: '+e.message;console.error('[Gado FSG]',e);
     } else {
       document.getElementById('dot').className='dot warn';
       document.getElementById('stxt').textContent='Falha ao atualizar';
