@@ -582,7 +582,7 @@ async function fetchSheetData(gid){
   const res=await fetch(`${APPS_SCRIPT_URL}?aba=${aba}&token=${encodeURIComponent(authToken)}`,{signal:AbortSignal.timeout(60000)});
   const t=await res.text();
   if(t.startsWith('ERRO')){
-    if(/token|acesso/i.test(t)){authToken=null;try{sessionStorage.removeItem('gtk');}catch(e){}}
+    if(/token (inválido|expirado|ausente)/i.test(t)){authToken=null;try{sessionStorage.removeItem('gtk');}catch(e){}}
     throw new Error(t);
   }
   if(!res.ok||t.length<50||/^\s*[<{]/.test(t))throw new Error('Resposta inválida do servidor.');
@@ -627,7 +627,7 @@ async function loadModule(module, silent=false){
     if(lu)lu.textContent='Última atualização: '+now;
     startAutoRefresh();
   } catch(e){
-    if(!authToken){iniciarLogin();return;}
+    if(!authToken){iniciarLogin();setTimeout(()=>{const m=document.getElementById('loginMsg');if(m)m.textContent='Não foi possível validar o acesso: '+e.message;},50);return;}
     if(!silent){
       show('errorPage');
       document.getElementById('dot').className='dot err';
